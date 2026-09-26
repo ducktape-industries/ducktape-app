@@ -170,8 +170,10 @@ impl ViewTree {
             element = element.child(self.node(child, window, cx));
         }
         // a view's scroller shows its vertical bar: the bar is absolute, over
-        // the scroller's bounds, and the handle keeps the offset across frames
-        if style.overflow.y == Some(gpui_kit::Overflow::Scroll) && !self.authored_path.is_empty() {
+        // the scroller's bounds, and the handle keeps the offset across frames.
+        // The handle is kept at the scroller's own id: an id-less one would
+        // share its parent's path, and so its handle, with any sibling there.
+        if style.overflow.y == Some(gpui_kit::Overflow::Scroll) && id.is_some() {
             let handle = self
                 .scrolls
                 .entry(self.authored_path.clone())

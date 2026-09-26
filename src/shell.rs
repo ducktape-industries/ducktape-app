@@ -547,6 +547,9 @@ pub(crate) struct DesktopWindow {
     rail: gpui_kit::ScrollHandle,
     /// The window width the bar's full words need; narrower, it folds.
     bar_needs: f32,
+    /// What `bar_needs` was measured over: the network, the tabs, who is
+    /// signed in. Changed, the bar is measured again.
+    bar_made: u64,
     /// The width the bar was last drawn at unfolded; `None` while folded.
     bar_drawn: Option<f32>,
     focus: gpui_kit::FocusHandle,

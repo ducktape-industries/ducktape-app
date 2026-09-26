@@ -91,6 +91,7 @@ impl DesktopWindow {
             bar_buttons: Default::default(),
             rail: Default::default(),
             bar_needs: 0.,
+            bar_made: 0,
             bar_drawn: None,
             focus,
             _activation: activation,

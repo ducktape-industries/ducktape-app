@@ -563,3 +563,100 @@ fn sensor_preserves_linear_fill_bounds(cx: &mut gpui_kit::TestAppContext) {
         );
     });
 }
+
+/// A scrolling container keeps its handle at its own id: the offset holds
+/// across frames that insert a sibling before it, and goes with it. One
+/// without an id keeps none — its path is its parent's, shared with any
+/// sibling scroller there.
+#[gpui_kit::test]
+fn a_scrolling_container_keeps_its_handle_at_its_own_id(cx: &mut gpui_kit::TestAppContext) {
+    cx.update(gpui_kit::init);
+    let scroll_style = || {
+        let mut style = div().flex().flex_col().style().clone();
+        style.overflow.y = Some(gpui_kit::Overflow::Scroll);
+        style.size.width = Some(fixed(300.));
+        style.size.height = Some(fixed(200.));
+        style.min_size.height = Some(fixed(200.));
+        style
+    };
+    let rows = |tag: &str, n: usize| -> Vec<wire::Node> {
+        (0..n)
+            .map(|i| {
+                sized(
+                    &format!("{tag}-row-{i}"),
+                    text(&format!("{tag}-t-{i}"), "x"),
+                    Some(fixed(300.)),
+                    Some(fixed(100.)),
+                )
+            })
+            .collect()
+    };
+    let banner = || {
+        sized(
+            "banner",
+            text("bt", "b"),
+            Some(fixed(300.)),
+            Some(fixed(50.)),
+        )
+    };
+    let root = |with_banner: bool, n: usize| {
+        container(
+            "main",
+            with_banner
+                .then(banner)
+                .into_iter()
+                .chain([container_with_style("list", scroll_style(), rows("a", n))]),
+        )
+    };
+    let window = cx.open_window(size(px(400.), px(600.)), |_, _| {
+        ViewTree::new(root(false, 10))
+    });
+    let tree = window.root(cx).unwrap();
+    let mut native = gpui_kit::VisualTestContext::from_window(window.into(), cx);
+    native.update(|window, cx| window.render_frame(cx));
+    let path = vec![named_id("main"), named_id("list")];
+    tree.read_with(&native, |tree, _| {
+        assert_eq!(tree.scrolls[&path].max_offset().y, px(800.));
+        assert_eq!(
+            tree.measured_bounds(&path).unwrap().size,
+            size(px(300.), px(200.)),
+            "the bar leaves the scroller's layout alone"
+        );
+        tree.scrolls[&path].set_offset(point(px(0.), px(-300.)));
+    });
+    native.update(|window, cx| window.render_frame(cx));
+    tree.update(&mut native, |tree, cx| tree.replace(root(true, 12), cx));
+    native.update(|window, cx| window.render_frame(cx));
+    tree.read_with(&native, |tree, _| {
+        assert_eq!(tree.scrolls[&path].offset().y, px(-300.));
+        assert_eq!(tree.scrolls[&path].max_offset().y, px(1000.));
+    });
+    tree.update(&mut native, |tree, cx| {
+        tree.replace(container("main", [banner()]), cx)
+    });
+    native.update(|window, cx| window.render_frame(cx));
+    tree.read_with(&native, |tree, _| {
+        assert!(
+            tree.scrolls.is_empty(),
+            "a removed scroller's handle is dropped"
+        );
+    });
+    let anonymous = |tag: &str, n: usize| {
+        wire::Node::Container(view_wire::ContainerNode {
+            id: None,
+            style: scroll_style(),
+            interactivity: Default::default(),
+            children: rows(tag, n),
+        })
+    };
+    tree.update(&mut native, |tree, cx| {
+        tree.replace(
+            container("main", [anonymous("b", 10), anonymous("c", 20)]),
+            cx,
+        )
+    });
+    native.update(|window, cx| window.render_frame(cx));
+    tree.read_with(&native, |tree, _| {
+        assert!(tree.scrolls.is_empty(), "id-less scrollers share no handle");
+    });
+}
