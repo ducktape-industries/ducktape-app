@@ -266,7 +266,9 @@ impl DesktopWindow {
                     .role(Role::TabList)
                     .min_w_0()
                     .flex()
-                    .overflow_hidden()
+                    // folded and still too many: they scroll
+                    .overflow_x_scroll()
+                    .track_scroll(&self.rail)
                     .children(tabs)
                     .when(rail.is_empty(), |list| {
                         list.child(

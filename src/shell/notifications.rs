@@ -241,16 +241,20 @@ impl DesktopWindow {
             .flex_shrink_0()
             .border_t_1()
             .border_color(ink.line)
-            .child(
-                small_link("notif-clear-read", "Clear read", || {
-                    Message::NotifyClearRead
-                })
-                .child("Clear read"),
-            )
+            // only while something read is there to clear
+            .when(entries.iter().any(|entry| entry.read), |footer| {
+                footer.child(
+                    small_link("notif-clear-read", "Clear read", || {
+                        Message::NotifyClearRead
+                    })
+                    .child("Clear read"),
+                )
+            })
             .child(
                 small_link("notif-settings", "Notification settings", || {
                     Message::NotifySettings
                 })
+                .ml_auto()
                 .flex()
                 .items_center()
                 .gap(px(6.))

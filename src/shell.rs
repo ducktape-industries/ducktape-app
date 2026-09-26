@@ -51,7 +51,7 @@ mod theme;
 #[cfg(not(target_os = "macos"))]
 use crate::fonts::EMOJI_FACE;
 use crate::fonts::{BUNDLED_FACES, fallback_chain};
-use theme::{NARROW_WINDOW_WIDTH, configure_native_theme};
+use theme::configure_native_theme;
 
 pub(crate) use crate::runtime::WindowKey;
 
@@ -543,6 +543,12 @@ pub(crate) struct DesktopWindow {
     /// Where the bar's menu buttons were last painted: each menu hangs
     /// under its own.
     bar_buttons: HashMap<crate::Overlay, gpui_kit::Bounds<gpui_kit::Pixels>>,
+    /// The bar's program tabs: how far past their strip they ran.
+    rail: gpui_kit::ScrollHandle,
+    /// The window width the bar's full words need; narrower, it folds.
+    bar_needs: f32,
+    /// The width the bar was last drawn at unfolded; `None` while folded.
+    bar_drawn: Option<f32>,
     focus: gpui_kit::FocusHandle,
     _activation: gpui_kit::Subscription,
     _observer: gpui_kit::Subscription,

@@ -23,7 +23,19 @@ impl DesktopWindow {
         if rail.iter().any(|row| row.note == Some("Loading")) {
             window.request_animation_frame();
         }
-        let narrow = window.viewport_size().width < px(NARROW_WINDOW_WIDTH);
+        // the bar folds its words once, drawn whole, its tabs ran past their
+        // strip at this width: all of them fold together, none is cut
+        let width = f32::from(window.viewport_size().width);
+        let over = f32::from(self.rail.max_offset().x);
+        if let Some(drawn) = self.bar_drawn
+            && over > 0.
+            && drawn + over > self.bar_needs
+        {
+            self.bar_needs = drawn + over;
+            window.refresh();
+        }
+        let narrow = width < self.bar_needs;
+        self.bar_drawn = (!narrow).then_some(width);
         // the desk's size, and on an untouched console the program it opens
         let desk = self.desk(window);
         let layout = self.layout(cx);

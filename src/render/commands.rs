@@ -390,6 +390,12 @@ impl ViewTree {
         let mut mounted = std::collections::HashSet::new();
         walk_authored_paths(&root, &mut Vec::new(), &mut |node, path| {
             mounted.insert(path.clone());
+            // a scrolling container keeps its handle, as a Scroll node does
+            if let wire::Node::Container(view_wire::ContainerNode { style, .. }) = node
+                && style.overflow.y == Some(gpui_kit::Overflow::Scroll)
+            {
+                scrolls.insert(path.clone());
+            }
             if matches!(
                 node,
                 wire::Node::Container(view_wire::ContainerNode { id: Some(_), .. })

@@ -52,8 +52,4 @@ pub(super) fn traffic_lights(window: &gpui_kit::Window) -> Option<f32> {
     (cfg!(target_os = "macos") && !window.is_fullscreen()).then_some(78.)
 }
 
-/// Below this window width the menu bar folds its words to initials and
-/// drops the ones it can spare, so the program tabs keep their room.
-pub(super) const NARROW_WINDOW_WIDTH: f32 = 720.;
-
 pub(crate) use crate::fonts::{FAMILY_MONO, FAMILY_UI};

@@ -384,6 +384,17 @@ impl ViewTree {
             .child(observe)
             .child(self.measure(&path, cx));
         let handle = self.scrolls[&path].clone();
+        // a vertical bar is the scroller's own child: absolute, it paints over
+        // the scroller's bounds and leaves its layout (flex and all) untouched
+        if *direction == wire::ScrollDirection::Vertical && !bar_hidden {
+            return content
+                .child(
+                    Scrollbar::vertical(&handle)
+                        .id("scrollbar")
+                        .mode(ScrollbarMode::Always),
+                )
+                .into_any_element();
+        }
         let scrollbar = match direction {
             wire::ScrollDirection::Vertical => None,
             wire::ScrollDirection::Horizontal => Some(Scrollbar::horizontal(&handle)),
