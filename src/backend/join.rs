@@ -22,7 +22,9 @@ use identity::{Admission, CONSENT_NAMESPACE, Consent, Op, Query, Reply};
 use sha2::{Digest as _, Sha256};
 
 use super::noded::Frame;
-use super::passkey::{ask, auth_page, expires_at, generation, submit, submit_seated, url_encode};
+use super::passkey::{
+    ask, auth_page, expires_at, generation, get, person, submit, submit_seated, url_encode,
+};
 use super::{RpcClient, hex_decode, hex_encode, next_seq, seated_key, seated_sign};
 
 use base64::Engine as _;
@@ -284,6 +286,7 @@ pub(crate) async fn add_recovery_key(
     let account = account_of(client, network, device)
         .await?
         .ok_or("This device's key holds no account yet.")?;
+    person(&get(client, network, account).await?)?;
     let admission = Admission {
         network: network.as_bytes().to_vec(),
         scheme: abi::Scheme::Ed25519,
@@ -329,6 +332,7 @@ pub(crate) async fn join_with_recovery_key(
     let account = account_of(client, network, recovery.public_key().as_ref().to_vec())
         .await?
         .ok_or_else(|| format!("That recovery key isn't on an account on {network}."))?;
+    person(&get(client, network, account).await?)?;
     let device = seated_key().await.map_err(|refusal| refusal.message)?;
     let admission = Admission {
         network: network.as_bytes().to_vec(),

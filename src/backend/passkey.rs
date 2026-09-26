@@ -193,7 +193,11 @@ pub(crate) async fn sign_in(
 }
 
 /// The account `number` on `network`.
-async fn get(client: &RpcClient, network: &str, number: u64) -> Result<identity::Account, String> {
+pub(super) async fn get(
+    client: &RpcClient,
+    network: &str,
+    number: u64,
+) -> Result<identity::Account, String> {
     match ask(client, network, Query::Get { number }).await? {
         Reply::Account(Some(account)) => Ok(account),
         _ => Err(format!("This names an account {network} does not have.")),
@@ -204,7 +208,7 @@ async fn get(client: &RpcClient, network: &str, number: u64) -> Result<identity:
 /// agent's keys are its manager's to add, and a module's account holds
 /// none, so a device key that holds either is told so instead of sending
 /// an `AddKey` identity would refuse.
-fn person(account: &identity::Account) -> Result<(), String> {
+pub(super) fn person(account: &identity::Account) -> Result<(), String> {
     let name = &account.card.name;
     match &account.control {
         Control::Person { .. } => Ok(()),
