@@ -129,6 +129,8 @@ pub struct Receipt {
     pub program: ProgramId,
     pub outcome: abi::Outcome,
     pub events: Vec<Vec<u8>>,
+    /// The runs this one's messages caused, in order.
+    pub nested: Vec<Receipt>,
 }
 
 /// One block's writes to one program, as `/v1/changes/<program>` streams them.
@@ -350,6 +352,22 @@ mod tests {
             &frame.body.preimage(),
             &frame.proof
         ));
+    }
+
+    /// The bytes `host::Receipt` encodes a submission with one nested run
+    /// to: program "a", Applied [7], no events, nested [program "b",
+    /// Applied [], no events, nested []].
+    #[test]
+    fn receipt_decodes_the_hosts_nested_runs() {
+        let bytes = [
+            1, 0, 0, 0, b'a', 0, 1, 0, 0, 0, 7, 0, 0, 0, 0, 1, 0, 0, 0, //
+            1, 0, 0, 0, b'b', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let receipt: Receipt = abi::decode(&bytes).unwrap();
+        assert_eq!(receipt.program, "a");
+        assert_eq!(receipt.outcome, abi::Outcome::Applied { output: vec![7] });
+        assert_eq!(receipt.nested.len(), 1);
+        assert_eq!(receipt.nested[0].program, "b");
     }
 
     #[test]
