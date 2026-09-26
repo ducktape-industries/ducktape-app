@@ -129,6 +129,31 @@ fn an_empty_field_wears_the_guests_placeholder_and_takes_what_is_typed(
     });
 }
 
+/// A capped field over a long body paints its bar in `Always`, and the theme's
+/// own mode is back when the frame is done: the rest of the app keeps its bars.
+#[cfg(test)]
+#[gpui_kit::test]
+fn a_capped_field_shows_its_bar_and_leaves_the_theme_as_it_was(cx: &mut gpui_kit::TestAppContext) {
+    use gpui_kit::test::TestWindowExt as _;
+    cx.update(gpui_kit::init);
+    let body = vec!["a line of a long message"; 40].join("\n");
+    let store = store_with("long", &body, Vec::new(), "");
+    let window = cx.open_window(gpui_kit::size(px(400.), px(600.)), |window, cx| {
+        TextEditor::new(editor_path(), store.clone(), window, cx)
+    });
+    let editor = window.root(cx).unwrap();
+    let mut native = gpui_kit::VisualTestContext::from_window(window.into(), cx);
+    native.update(|window, cx| {
+        editor.update(cx, |editor, cx| editor.set_fills(false, Some(8), cx));
+        let before = gpui_base::Theme::global(cx).scrollbar.mode();
+        assert_ne!(before, ScrollbarMode::Always);
+        window.render_frame(cx);
+        window.render_frame(cx);
+        assert_eq!(gpui_base::Theme::global(cx).scrollbar.mode(), before);
+        assert_eq!(editor.read(cx).input.read(cx).value().as_ref(), body);
+    });
+}
+
 /// Shift and an arrow reach past the line they started on. This is the whole
 /// reason the document is one field: a selection that stops at the newline is
 /// a selection that cannot take a paragraph.

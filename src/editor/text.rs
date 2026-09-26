@@ -9,13 +9,15 @@
 //! learned is an edit the writer cannot make.
 
 use super::{EditorStore, Projection, key_state, offset, position};
+use gpui_base::ScrollbarMode;
 use gpui_base::StyledExt as _;
 use gpui_kit::base::input::{Textarea, TextareaState};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::{
-    App, AppContext as _, Context, Edges, Entity, EntityInputHandler as _, EventEmitter,
-    Focusable as _, InteractiveElement as _, IntoElement, Keystroke, MouseButton,
-    ParentElement as _, Render, Styled as _, Subscription, Window, div, px,
+    AnyElement, App, AppContext as _, Bounds, Context, Edges, Element, ElementId, Entity,
+    EntityInputHandler as _, EventEmitter, Focusable as _, GlobalElementId, InspectorElementId,
+    InteractiveElement as _, IntoElement, Keystroke, LayoutId, MouseButton, ParentElement as _,
+    Pixels, Render, Styled as _, Subscription, Window, div, px,
 };
 use std::ops::Range;
 use std::sync::Arc;
@@ -445,11 +447,79 @@ impl Render for TextEditor {
                         }
                     },
                     // the base Textarea draws no node of its own
-                    Textarea::new(&self.input),
+                    ShownBar(Textarea::new(&self.input).into_any_element()),
                 )
                 .when(self.fills, |field| field.h_full()),
                 accessible,
             ))
+    }
+}
+
+/// The field's own vertical bar, shown whenever its words run past it, as a
+/// view's scroller shows its bar (`render::layout`): a capped composer with
+/// no bar reads as a message cut short. The field draws the bar under the
+/// theme's mode and takes none of its own, so the mode is `Always` while this
+/// field, and only this field, lays out and paints.
+struct ShownBar(AnyElement);
+
+impl ShownBar {
+    fn always<R>(cx: &mut App, f: impl FnOnce(&mut App) -> R) -> R {
+        let theme = gpui_base::Theme::global_mut(cx);
+        let before = theme.scrollbar.clone();
+        theme.scrollbar = before.clone().with_mode(ScrollbarMode::Always);
+        let out = f(cx);
+        gpui_base::Theme::global_mut(cx).scrollbar = before;
+        out
+    }
+}
+
+impl IntoElement for ShownBar {
+    type Element = Self;
+    fn into_element(self) -> Self {
+        self
+    }
+}
+
+impl Element for ShownBar {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+    fn source_location(&self) -> Option<&'static core::panic::Location<'static>> {
+        None
+    }
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, ()) {
+        (self.0.request_layout(window, cx), ())
+    }
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        _: &mut (),
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        Self::always(cx, |cx| self.0.prepaint(window, cx));
+    }
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        _: &mut (),
+        _: &mut (),
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        Self::always(cx, |cx| self.0.paint(window, cx));
     }
 }
 
